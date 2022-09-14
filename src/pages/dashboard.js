@@ -4,8 +4,12 @@ import React, { useEffect } from 'react';
 import Timeline from '../components/Timeline';
 import Sidebar from '../components/sidebar';
 import Header from '../components/Header';
+import useUser from '../hooks/use-user';
+import _ from 'lodash';
 
 export default function Dashboard() {
+  const { user } = useUser();
+
     useEffect(() => {
         document.title = 'Social media';
     }, []);
@@ -14,10 +18,12 @@ export default function Dashboard() {
         <div className='bg-gray-background font-Roboto '>
             <Header />
 
-            <div className='grid grid-cols-3 gap-4  mx-auto  max-w-screen-lg md:grid-cols-1'>
-                <Timeline />
-                <Sidebar />
-            </div>
+        {!_.isEmpty(user) && (
+          <div className='grid grid-cols-3 gap-4  mx-auto  max-w-screen-lg md:grid-cols-1'>
+            <Timeline />
+            <Sidebar />
+          </div>
+        )}
         </div>
     );
 }

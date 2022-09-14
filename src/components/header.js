@@ -3,129 +3,102 @@
 import React, { useContext } from 'react';
 import FirebaseContext from '../context/firebase';
 import UserContext from '../context/user';
-import * as Routes from '../constants/routes';
+
 import { Link } from 'react-router-dom';
 import * as ROUTES from '../constants/routes';
 
 import { useNavigate } from 'react-router-dom';
+import Avatar, { AvatarVariants } from './avatar';
+import { fireAuth } from '../firebase_settings/firebase';
+import { useEffect } from 'react';
+import useUser from '../hooks/use-user';
+import profilePlaceholder from '../resources/profile-placeholder.svg';
+//react icons
+import { AiFillHome, AiOutlineLogout } from 'react-icons/ai';
+import { IoIosAddCircle } from 'react-icons/io';
+
 export default function Header() {
-    const { firebase } = useContext(FirebaseContext);
+    // get imageSrc to be displayed in the header icon
     const { user } = useContext(UserContext);
+    const {
+        user: { imageSrc },
+    } = useUser();
 
     const navigate = useNavigate();
+
     return (
-        <header className='h-16 bg-white border-b border-gray-primary mb-8'>
+        <header className='h-20 bg-white border-b border-gray-primary mb-8 pb-2'>
             <div className='container mx-auto max-w-screen-lg h-full'>
                 <div className='flex justify-between h-full'>
                     <div
                         className='text-gray-700 text-center flex items-center align-items
-                    cursor-pointer'
+                    cursor-pointer w-20 '
                     >
-                        <h1 className='flex justify-center w-full'>
-                            <Link to={ROUTES.DASHBOARD}>Some random logo</Link>
-                        </h1>
+                        <div className='flex justify-center w-full '>
+                            <Link to={ROUTES.DASHBOARD}>
+                                <img
+                                    src='/images/logo.png'
+                                    alt='logo'
+                                    className='mt-2 w-12 h-12 rounded-full  border-4 border-solid border-gray-500 '
+                                />
+                            </Link>
+                        </div>
                     </div>
+
                     <div className='text-gray-700 text-center flex items-center align-items'>
                         {user ? (
                             <>
-                                <Link
-                                    to={ROUTES.DASHBOARD}
-                                    arial-label='Dashboard'
-                                >
-                                    <svg
-                                        xmlns='http://www.w3.org/2000/svg'
-                                        className='h-6 w-6'
-                                        fill='none'
-                                        viewBox='0 0 24 24'
-                                        stroke='currentColor'
-                                        strokeWidth='2'
-                                    >
-                                        <path
-                                            strokeLinecap='round'
-                                            strokeLinejoin='round'
-                                            d='M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2
-                                        2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1
-                                        1 0 011 1v4a1 1 0 001 1m-6 0h6'
-                                        />
-                                    </svg>
+                                <Link to={ROUTES.DASHBOARD}>
+                                    <AiFillHome
+                                        className='mr-3'
+                                        color='black'
+                                        size={40}
+                                    />
                                 </Link>
 
-                                <Link to={ROUTES.REPORT} arial-label='Report'>
-                                    <svg
-                                        xmlns='http://www.w3.org/2000/svg'
-                                        className='h-6 w-6'
-                                        fill='none'
-                                        viewBox='0 0 24 24'
-                                        stroke='currentColor'
-                                        strokeWidth='2'
-                                    >
-                                        <path
-                                            strokeLinecap='round'
-                                            strokeLinejoin='round'
-                                            d='M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z'
-                                        />
-                                    </svg>
-                                </Link>
-
-                                <Link to={ROUTES.MAP} arial-label='Map'>
-                                    <svg
-                                        xmlns='http://www.w3.org/2000/svg'
-                                        className='h-6 w-6'
-                                        fill='none'
-                                        viewBox='0 0 24 24'
-                                        stroke='currentColor'
-                                        strokeWidth='2'
-                                    >
-                                        <path
-                                            strokeLinecap='round'
-                                            strokeLinejoin='round'
-                                            d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z'
-                                        />
-                                        <path
-                                            strokeLinecap='round'
-                                            strokeLinejoin='round'
-                                            d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
-                                        />
-                                    </svg>
+                                <Link to={ROUTES.ADD_IMAGE}>
+                                    <IoIosAddCircle
+                                        className='mr-3'
+                                        color='black'
+                                        size={45}
+                                    />
                                 </Link>
 
                                 <button
                                     type='button'
                                     title='Sign Out'
                                     onClick={() => {
-                                        firebase.auth().signOut();
+                                        fireAuth.signOut();
                                         navigate(ROUTES.LOGIN);
                                     }}
                                     onKeyDown={(event) => {
                                         if (event.key === 'Enter') {
-                                            firebase.auth().signOut();
+                                            fireAuth.signOut();
                                             navigate(ROUTES.LOGIN);
                                         }
                                     }}
                                 >
-                                    <svg
-                                        xmlns='http://www.w3.org/2000/svg'
-                                        className='h-6 w-6'
-                                        fill='none'
-                                        viewBox='0 0 24 24'
-                                        stroke='currentColor'
-                                        strokeWidth='2'
-                                    >
-                                        <path
-                                            strokeLinecap='round'
-                                            strokeLinejoin='round'
-                                            d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3
-                                        3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'
-                                        />
-                                    </svg>
+                                    <AiOutlineLogout
+                                        className=' mr-3'
+                                        color='black'
+                                        size={40}
+                                    />
                                 </button>
 
-                                <div className='flex items-center cursor-pointer'>
+                                <div className='flex items-center cursor-pointer '>
                                     <Link to={`/p/${user.displayName}`}>
+                                        {/*  <Avatar
+                                            variant={AvatarVariants.extraSmall}
+                                            src={imageSrc}
+                                        /> */}
                                         <img
-                                            className='rounded-full h-8 w-8 flex'
-                                            src={`/images/avatars/${user.displayName}.jpg`}
-                                            alt={`${user.displayName} profile`}
+                                            src={
+                                                imageSrc
+                                                    ? imageSrc
+                                                    : profilePlaceholder
+                                            }
+                                            alt='Avatar'
+                                            className='w-10 h-10 rounded-full object-cover mr-4'
                                         />
                                     </Link>
                                 </div>

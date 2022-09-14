@@ -4,7 +4,13 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 export default function Image({ src, caption }) {
-    return <img src={src} alt={caption} />;
+    return (
+        <img
+            className='w-[500px] h-[450px] object-cover rounded-l-xl'
+            src={src}
+            alt={caption}
+        />
+    );
 }
 
 Image.propTypes = {

@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
-import FirebaseContext from '../../context/firebase';
 import UserContext from '../../context/user';
+import { commentOnPost } from '../../services/firebasePosts';
 
 export default function AddComment({
     docId,
@@ -10,12 +10,11 @@ export default function AddComment({
     commentInput,
 }) {
     const [comment, setComment] = useState('');
-    const { firebase, FieldValue } = useContext(FirebaseContext);
     const {
         user: { displayName },
     } = useContext(UserContext); // authentication
 
-    const handleSubmitComment = (event) => {
+    const handleSubmitComment = async (event) => {
         event.preventDefault();
 
         setComments([{ displayName, comment }, ...comments]); // we're passing a new object into the comments array
@@ -27,13 +26,11 @@ export default function AddComment({
         setComment('');
 
         // saving into firebase
-        return firebase //refactor to V9 and explain
-            .firestore()
-            .collection('photos')
-            .doc(docId) // we need to modify by the docId and then add into the comments array
-            .update({
-                comments: FieldValue.arrayUnion({ displayName, comment }),
-            });
+        return await commentOnPost({
+            docId,
+            displayName,
+            comment,
+        });
     };
 
     return (

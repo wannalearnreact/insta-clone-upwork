@@ -4,6 +4,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import FirebaseContext from '../context/firebase';
 import * as ROUTES from '../constants/routes';
+import { signIn } from '../services/firebaseAuth';
 
 export default function Login() {
     const history = useNavigate();
@@ -18,37 +19,34 @@ export default function Login() {
     const handleLogin = async (event) => {
         event.preventDefault();
 
-        try {
-            await firebase
-                .auth()
-                .signInWithEmailAndPassword(emailAddress, password);
-            history(ROUTES.DASHBOARD); //history.push(ROUTES.DASHBOARD)
-        } catch (error) {
-            setEmailAddress('');
-            setPassword('');
-            setError(error.message);
-        }
+        signIn(
+            { emailAddress, password },
+            () => history(ROUTES.DASHBOARD),
+            (err) => {
+                setEmailAddress('');
+                setPassword('');
+                setError(err);
+            }
+        );
     };
 
     useEffect(() => {
-        document.title = 'Login - Encontrarte';
+        document.title = 'Login';
     }, []);
 
     return (
-        <div
-            className='container flex mx-auto max-w-screen-md items-center
-        h-screen'
-        >
-            <div className='flex w-3/5'>
-                <img src='/images/icon.png' alt='Icon' />
-            </div>
-            <div className='flex flex-col w-2/5'>
+        <div className='container flex mx-auto max-w-screen-md items-center justify-center h-screen font-Roboto '>
+            <div className='flex flex-col w-2/5 text-center'>
                 <div
                     className='flex flex-col items-center bg-white p-4 border border-gray-primary
-                mb-4 rounded '
+                    mb-4 rounded-3xl '
                 >
                     <h1 className='flex justify-center w-full'>
-                        <p className='mt-2 w-6/12 mb-4'>Encontrarte</p>
+                        <img
+                            src='/images/logo.png'
+                            alt='logo'
+                            className='w-20 h-20'
+                        />
                     </h1>
 
                     {error && (
@@ -57,28 +55,26 @@ export default function Login() {
 
                     <form onSubmit={handleLogin} method='POST'>
                         <input
-                            aria-label='Enter your email address'
                             typeof='text'
                             placeholder='Email address'
                             className='text-sm text-gray-base w-full mr-3 py-5 px-4 h-2 border
-                        border-gray-primary rounded mb-2'
+                        border-gray-primary rounded-full  mb-2'
                             onChange={({ target }) =>
                                 setEmailAddress(target.value)
                             }
                         />
                         <input
-                            aria-label='Enter your password'
                             type='password'
                             placeholder='Password'
                             className='text-sm text-gray-base w-full mr-3 py-5 px-4 h-2 border
-                        border-gray-primary rounded mb-2'
+                        border-gray-primary rounded-full mb-2'
                             onChange={({ target }) => setPassword(target.value)}
                             required
                         />
                         <button
                             disabled={isInvalid}
                             type='submit'
-                            className={`bg-blue-medium text-white w-full rounded h-8 font-bold
+                            className={`bg-gray-base text-white w-full rounded-full h-10 font-bold  text-xl
                         ${isInvalid && 'opacity-50'}`}
                         >
                             Log In
@@ -86,14 +82,14 @@ export default function Login() {
                     </form>
                 </div>
                 <div
-                    className='flex justify-center items-center flex-col w-full bg-white p-4 rounded border
+                    className='flex justify-center items-center flex-col w-full bg-white p-4 rounded-full border
             border-gray-primary'
                 >
                     <p className='text-sm'>
                         Dont have an account?
                         <Link
                             to={ROUTES.SIGN_UP}
-                            className='font-bold text-blue-medium'
+                            className='font-bold text-gray-500 ml-1'
                         >
                             Sign Up
                         </Link>

@@ -3,15 +3,25 @@ import PropTypes from 'prop-types';
 import Skeleton from 'react-loading-skeleton';
 import useUser from '../../hooks/use-user';
 import { isUserFollowingProfile, toggleFollow } from '../../services/firebase';
+import Avatar from '../avatar';
+import profilePlaceholder from '../../resources/profile-placeholder.svg';
+
+import { changeProfilePicture } from '../../services/firebaseAuth';
+import { fireAuth, fireStorage } from '../../firebase_settings/firebase';
+import { getDownloadURL, ref } from 'firebase/storage';
+import { AiFillEdit } from 'react-icons/ai';
 
 export default function Header({
     photosCount,
     followerCount,
     setFollowerCount,
     profile: {
-        //explain this object
+        // docId is used in firebase queries
         docId: profileDocId,
+        // userId in database
         userId: profileUserId,
+        // userInfo
+        imageSrc,
         fullName,
         followers = [],
         following = [],
@@ -21,16 +31,20 @@ export default function Header({
 }) {
     const { user } = useUser();
     const [isFollowingProfile, setIsFollowingProfile] = useState(false);
+    const [loading, setLoading] = useState(true);
     const activeBtnFollow = user.username && user.username !== profileUsername; //explain
 
-    //explain this whole function, i understand it but not 100%
     const handleToggleFollow = async () => {
+        // toggling react state by getting the previous version and flipping the bit
+        // setState(  (previous) => !previous  )
         setIsFollowingProfile((isFollowingProfile) => !isFollowingProfile); //true to false or false to true
+        // increment the counter if the action is following, decrement otherwise
         setFollowerCount({
             followerCount: isFollowingProfile
                 ? followerCount - 1
                 : followerCount + 1,
         });
+        // call the firebase toggle function
         await toggleFollow(
             isFollowingProfile,
             user.docId,
@@ -39,13 +53,15 @@ export default function Header({
             user.userId
         );
     };
-    //explain this useEffect a bit more than i did
+
+    // this useEffect relanches on every user change
     useEffect(() => {
         const isLoggedInUserFollowingProfile = async () => {
             const isFollowing = await isUserFollowingProfile(
                 user.username,
                 profileUserId
             ); // pass my username and the profile I'm in (ex. Raphael)
+            // set the follwing action state according following state between the two users in the database.
             setIsFollowingProfile(!!isFollowing); // true or false according what firebase returns
         };
 
@@ -53,27 +69,65 @@ export default function Header({
         if (user.username && profileUserId) {
             isLoggedInUserFollowingProfile();
         }
+        setLoading(false);
     }, [user.username, profileUserId]); // and why these two paremeters
 
+    async function onChangeProfilePicture(e) {
+        setLoading(true);
+
+        await changeProfilePicture(
+            {
+                image: e.target.files[0],
+                userId: user.userId,
+            },
+            // onSuccess we reload the current component to match the new image
+            (link) => window.location.reload(),
+            () => {}
+        );
+        setLoading(false);
+    }
+
     return (
-        <div className='grid grid-cols-3 gap-4 justify-between mx-auto max-w-screen-lg'>
-            <div className='container flex justify-center'>
+        <div className='grid grid-cols-3 gap-4 justify-between mx-auto max-w-screen-lg '>
+            <div className='container flex justify-center items-center	'>
                 {user.username && (
-                    <img
-                        className='rounded-full h-40 w-40 flex'
-                        alt={`${user.username} profile picture`}
-                        src={`/images/avatars/${profileUsername}.jpg`}
-                    />
+                    <div className='relative '>
+                        <img
+                            src={imageSrc ? imageSrc : profilePlaceholder}
+                            alt=''
+                            className='rounded-full h-40 w-40 flex md:w-[100px] md:h-[100px]'
+                        />
+                        {!activeBtnFollow && (
+                            <div>
+                                <label
+                                    htmlFor='profile'
+                                    className='absolute bottom-2 right-9 bg-blue-medium rounded-full w-6 h-6 flex justify-center align-center cursor-pointer    md:bottom-1 md:right-6'
+                                >
+                                    <span>
+                                        <AiFillEdit size={22} />
+                                    </span>
+                                </label>
+                                <input
+                                    className='hidden'
+                                    type='file'
+                                    id='profile'
+                                    onChange={(e) => onChangeProfilePicture(e)}
+                                />
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
             <div className='flex items-center justify-center flex-col col-span-2'>
                 <div className='container flex-col items-center'>
-                    <p className='text-2xl mr-4'>{profileUsername}</p>
+                    <p className='text-2xl mr-4 capitalize'>
+                        {profileUsername}
+                    </p>
                     {/* check that we are not able to follow ourselves
                     'if it's a truty value and the user isn't on their own profile =>'*/}
                     {activeBtnFollow && (
                         <button
-                            className='bg-blue-medium font-bold text-sm rounded text-white
+                            className='bg-gray-base font-bold text-sm rounded text-white
                             w-20 h-8'
                             type='button'
                             onClick={handleToggleFollow}
@@ -83,7 +137,7 @@ export default function Header({
                                 }
                             }}
                         >
-                            {isFollowingProfile ? 'Unfollow' : 'Follow'}
+                            {isFollowingProfile ? 'Ditch' : 'Connect'}
                         </button>
                     )}
                 </div>
@@ -91,10 +145,10 @@ export default function Header({
                     {followers === undefined || following === undefined ? (
                         <Skeleton count={1} width={677} height={24} />
                     ) : (
-                        <>
+                        <div className='grid'>
                             <p className='mr-10'>
                                 <span className='font-bold'>{photosCount}</span>{' '}
-                                photos
+                                images
                             </p>
                             <p className='mr-10'>
                                 <span className='font-bold'>
@@ -109,11 +163,11 @@ export default function Header({
                                 </span>
                                 following
                             </p>
-                        </>
+                        </div>
                     )}
                 </div>
                 <div className='container mt-4'>
-                    <p className='font-medium'>
+                    <p className='font-bold capitalize'>
                         {!fullName ? (
                             <Skeleton count={1} height={24} />
                         ) : (

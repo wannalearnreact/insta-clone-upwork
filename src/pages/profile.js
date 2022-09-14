@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getUserByUserId, getUserByUsername } from '../services/firebase';
 import * as ROUTES from '../constants/routes';
-import Header from '../components/header';
+import Header from '../components/Header';
 import UserProfile from '../components/profile';
 
 export default function Profile() {
@@ -12,6 +12,8 @@ export default function Profile() {
     const { username } = useParams(); // destructure out username because in ROUTES we have /p/:username
     // we need to see if user exists
     const [user, setUser] = useState(null);
+    const [profileChanged, setProfileChanged] = useState(0);
+
     const history = useNavigate();
 
     // 2. check if username exists
@@ -31,7 +33,7 @@ export default function Profile() {
     return user?.username ? (
         <div className='bg-gray-background'>
             <Header />
-            <div className='mx-auto max-w-screen-lg'>
+            <div className='mx-auto max-w-screen-lg '>
                 <UserProfile user={user} />
             </div>
         </div>

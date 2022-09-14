@@ -1,80 +1,112 @@
 //refactor each function+explain better than it already has been explained
 
-import { firebase, FieldValue } from '../lib/firebase';
+import { fireStorage, fireStore as db } from '../firebase_settings/firebase';
+import {
+    collection,
+    query,
+    where,
+    getDocs,
+    limit,
+    doc,
+    updateDoc,
+    arrayUnion,
+    arrayRemove,
+} from 'firebase/firestore';
+import { getDownloadURL, ref } from 'firebase/storage';
 
+// check if username exists
 export async function doesUsernameExist(username) {
-    const result = await firebase //vamos a firebase que esta en la carpeta lib
-        .firestore() //vamos a firestore
-        .collection('users') //vamos a la coleccion de usuarios
-        .where('username', '==', username.toLowerCase()) //donde username sea igual al username que el usuario pasa
-        .get(); //traelo
-
+    // quering users with the same username
+    const q = query(
+        collection(db, 'users'),
+        where('username', '==', username.toLowerCase())
+    );
+    const result = await getDocs(q);
+    // checks if the result array contains any entries.
     return result.docs.map((user) => user.data().length > 0);
 }
 
 export async function getUserByUsername(username) {
     // check if username exists
-    const result = await firebase
-        .firestore()
-        .collection('users')
-        .where('username', '==', username.toLowerCase())
-        .get();
-
-    return result.docs.map((item) => ({
-        ...item.data(),
-        docId: item.id,
-    }));
+    const q = query(
+        collection(db, 'users'),
+        where('username', '==', username.toLowerCase())
+    );
+    const result = await getDocs(q);
+    return Promise.all(
+        result.docs.map(async (item) => ({
+            ...item.data(),
+            docId: item.id, // we pass docId so we can use it for CRUD operations
+            imageSrc:
+                item.data().imageSrc &&
+                // convert the image reference to downloadable link
+                (await getDownloadURL(
+                    ref(fireStorage, item.data().imageSrc)
+                ).catch((error) => {})),
+        }))
+    );
 }
 
 // get user from the firestore where userId === userId (pasado del auth)
 export async function getUserByUserId(userId) {
-    const result = await firebase
-        .firestore() //vamos a firestore
-        .collection('users') //vamos a la coleccion de usuarios
-        .where('userId', '==', userId) //donde userId sea igual al userId que el usuario pasa
-        .get(); //traelo
+    const q = query(collection(db, 'users'), where('userId', '==', userId));
+    const result = await getDocs(q);
 
-    const user = result.docs.map((item) => ({
-        ...item.data(),
-        docId: item.id, // we pass docId so we can use it for CRUD operations
-    }));
+    const user = Promise.all(
+        result.docs.map(async (item) => ({
+            ...item.data(),
+            docId: item.id, // we pass docId so we can use it for CRUD operations
+            imageSrc:
+                item.data().imageSrc &&
+                // convert the image reference to downloadable link
+                (await getDownloadURL(
+                    ref(fireStorage, item.data().imageSrc)
+                ).catch((error) => {})),
+        }))
+    );
 
     return user;
 }
 
 export async function getSuggestedProfiles(userId, following) {
-    const result = await firebase
-        .firestore()
-        .collection('users')
-        .limit(10)
-        .get();
+    const q = query(collection(db, 'users'), limit(10));
+    const result = await getDocs(q);
 
-    return result.docs
-        .map((user) => ({ ...user.data(), docId: user.id }))
-        .filter(
-            (profile) =>
-                profile.userId !== userId && !following.includes(profile.userId)
-        ); // let's say I have Rafael's userId which is '2', I wanna make
+    /* console.log({ result: result.docs[0].data(), userId }) */
+    return await Promise.all(
+        result.docs
+            .filter(
+                (profile) =>
+                    profile.data().userId !== userId &&
+                    !following.includes(profile.data().userId)
+            )
+            .map(async (user) => {
+                try {
+                    const url = await getDownloadURL(
+                        ref(fireStorage, user.data().imageSrc)
+                    );
+                    return { ...user.data(), docId: user.id, imageSrc: url };
+                } catch (error) {
+                    return { ...user.data(), docId: user.id };
+                }
+            })
+    ); // let's say I have Rafael's userId which is '2', I wanna make
     // make sure is not equal to my userId and that
     // they are not showing profiles that I'm already following
 }
 
 // updateLoggedInUserFollowing, updateFollowedUserFollowers
-
 export async function updateLoggedInUserFollowing( // update my own profile to say i'm following a particular user
     loggedInUserDocId, // currently logged in user document id (cindy's profile)
     profileId, // the user that Cindy requests to follow
     isFollowingProfile //true/false (am i currently following this person?)
 ) {
-    return firebase
-        .firestore()
-        .collection('users')
-        .doc(loggedInUserDocId)
-        .update({
-            following: isFollowingProfile // is the user following the profile?
-                ? FieldValue.arrayRemove(profileId) // <= if true
-                : FieldValue.arrayUnion(profileId), // <= if false
-        });
+    const ref = doc(db, 'users', loggedInUserDocId);
+    await updateDoc(ref, {
+        following: isFollowingProfile // is the user following the profile?
+            ? arrayRemove(profileId) // <= if true
+            : arrayUnion(profileId), // <= if false
+    });
 }
 
 export async function updateFollowedUserFollowers( // update that user's profile to say 'hey, this are the people following this particular profile
@@ -82,31 +114,26 @@ export async function updateFollowedUserFollowers( // update that user's profile
     loggedInUserDocId, // currently logged in user document id (cindy's profile)
     isFollowingProfile //true/false (am i currently following this person?)
 ) {
-    return firebase
-        .firestore()
-        .collection('users')
-        .doc(profileDocId)
-        .update({
-            followers: isFollowingProfile // is the user following the profile?
-                ? FieldValue.arrayRemove(loggedInUserDocId) // <= if true
-                : FieldValue.arrayUnion(loggedInUserDocId), // <= if false
-        });
+    const ref = doc(db, 'users', profileDocId);
+    await updateDoc(ref, {
+        followers: isFollowingProfile // is the user following the profile?
+            ? arrayRemove(loggedInUserDocId) // <= if true
+            : arrayUnion(loggedInUserDocId), // <= if false
+    });
 }
 
 export async function getPhotos(userId, following) {
     // [5, 4, 2] suppose we are following this users, we'll get the photos from all this particular users
-    const result = await firebase
-        .firestore()
-        .collection('photos')
-        .where('userId', 'in', following)
-        .get();
+    const q = query(collection(db, 'photos'), where('userId', 'in', following));
+
+    const result = await getDocs(q);
 
     const userFollowedPhotos = result.docs.map((photo) => ({
         ...photo.data(),
         docId: photo.id,
     }));
 
-    console.log('userFollowedPhotos', userFollowedPhotos);
+    /* console.log('userFollowedPhotos', userFollowedPhotos); */
 
     const photosWithUserDetails = await Promise.all(
         userFollowedPhotos.map(async (photo) => {
@@ -117,8 +144,15 @@ export async function getPhotos(userId, following) {
             // photo.userId = 2 <- Raphael
             const user = await getUserByUserId(photo.userId);
             // Raphael
-            const { username } = user[0];
-            return { username, ...photo, userLikedPhoto };
+            const { username, imageSrc } = user[0];
+            let url;
+            try {
+                if (imageSrc)
+                    url = await getDownloadURL(ref(fireStorage, imageSrc));
+            } catch (error) {
+                console.log({ error });
+            }
+            return { username, ...photo, userLikedPhoto, userImageSrc: url };
         })
     );
 
@@ -126,11 +160,8 @@ export async function getPhotos(userId, following) {
 }
 
 export async function getUserPhotosByUserId(userId) {
-    const result = await firebase
-        .firestore()
-        .collection('photos')
-        .where('userId', '==', userId)
-        .get();
+    const q = query(collection(db, 'photos'), where('userId', '==', userId));
+    const result = await getDocs(q);
 
     const photos = result.docs.map((photo) => ({
         ...photo.data(),
@@ -143,12 +174,13 @@ export async function isUserFollowingProfile(
     loggedInUserUsername,
     profileUserId
 ) {
-    const result = await firebase
-        .firestore()
-        .collection('users')
-        .where('username', '==', loggedInUserUsername) // cindy (active logged in user)
-        .where('following', 'array-contains', profileUserId) // it's gonna check if Raphael exists in my 'following' array
-        .get(); // get that data
+    const q = query(
+        collection(db, 'users'),
+        where('username', '==', loggedInUserUsername), // cindy (active logged in user)
+        where('following', 'array-contains', profileUserId) // it's gonna check if Raphael exists in my 'following' array
+    );
+
+    const result = await getDocs(q);
 
     const [response = {}] = result.docs.map((item) => ({
         ...item.data(),
@@ -157,6 +189,7 @@ export async function isUserFollowingProfile(
 
     return response.userId;
 }
+
 // activeUserDocId => my Id (the logged in user)
 // profileDocId => Raphael's DocId (the profile I'm currently visiting)
 export async function toggleFollow(

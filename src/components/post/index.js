@@ -2,36 +2,43 @@
 
 import React, { useRef } from 'react';
 import PropTypes from 'prop-types';
-import Header from './header';
-import Image from './image';
-import Actions from './actions';
-import Footer from './footer';
-import Comments from './comments';
-
+import Header from './Header';
+import Image from './Image';
+import Actions from './Actions';
+import Footer from './Footer';
+import Comments from './Comments';
+import { getDownloadURL, ref } from 'firebase/storage';
+import { fireStorage } from '../../firebase_settings/firebase';
+import { useEffect } from 'react';
 export default function Post({ content }) {
     const commentInput = useRef(null);
 
+    // detecting which post the user is commenting on.
     const handleFocus = () => commentInput.current.focus();
-    // components
-    // -> header, image, actions (like & comment icons), footer, comments
-
     return (
-        <div className='rounded col-span-4 border bg-white border-gray-primary mb-12 '>
-            <Header username={content.username} />
-            <Image src={content.imageSrc} caption={content.caption} />
-            <Actions
-                totalLikes={content.likes.length}
-                likedPhoto={content.userLikedPhoto}
-                docId={content.docId}
-                handleFocus={handleFocus}
-            />
-            <Footer caption={content.caption} username={content.username} />
-            <Comments
-                docId={content.docId}
-                comments={content.comments}
-                posted={content.dateCreated}
-                commentInput={commentInput}
-            />
+        <div className=' rounded flex border bg-white border-gray-primary mb-12 md:grid-cols-1  md:flex rounded-r-xl rounded-l-xl'>
+            <div className='w-2/3 md:w-full '>
+                <Header
+                    username={content.username}
+                    imageSrc={content.userImageSrc}
+                />
+                <Image src={content.imageSrc} caption={content.caption} />
+            </div>
+            <div className='w-1/3 grid content-between sm:w-full '>
+                <Footer caption={content.caption} username={content.username} />
+                <Actions
+                    totalLikes={content.likes.length}
+                    likedPhoto={content.userLikedPhoto}
+                    docId={content.docId}
+                    handleFocus={handleFocus}
+                />
+                <Comments
+                    docId={content.docId}
+                    comments={content.comments}
+                    posted={content.dateCreated}
+                    commentInput={commentInput}
+                />
+            </div>
         </div>
     );
 }

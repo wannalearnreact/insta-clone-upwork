@@ -2,7 +2,11 @@ import React, { useContext, useState } from 'react';
 import PropTypes from 'prop-types';
 import FirebaseContext from '../../context/firebase';
 import UserContext from '../../context/user';
+import { likePost } from '../../services/firebasePosts';
 
+/**
+ * post actions as like and comment
+ */
 export default function Actions({
     docId,
     totalLikes,
@@ -14,24 +18,14 @@ export default function Actions({
     } = useContext(UserContext);
     const [toggleLiked, setToggleLiked] = useState(likedPhoto);
     const [likes, setLikes] = useState(totalLikes);
-    const { firebase, FieldValue } = useContext(FirebaseContext);
 
     const handleToggleLiked = async () => {
         setToggleLiked((toggleLiked) => !toggleLiked); // let's say we have an image that hasn't been liked, we switch it with '!toggleLiked' so now it's liked (true to false or viceversa)
 
-        //refactor to V9 and explain
-        await firebase
-            .firestore()
-            .collection('photos')
-            .doc(docId)
-            .update({
-                likes: toggleLiked
-                    ? FieldValue.arrayRemove(userId)
-                    : FieldValue.arrayUnion(userId), // if they liked it (toggleLiked = true), remove name from array // P.S. leave my comments or
-                //add another if my are not good enough
-            });
-
-        setLikes((likes) => (toggleLiked ? likes - 1 : likes + 1));
+        await likePost(
+            { docId, userId, liked: toggleLiked },
+            () => setLikes((likes) => (toggleLiked ? likes - 1 : likes + 1))
+        );
     };
 
     return (
@@ -50,11 +44,10 @@ export default function Actions({
                         viewBox='0 0 24 24'
                         stroke='currentColor'
                         tabIndex={0}
-                        className={`w-8 mr-4 select-none cursor-pointer ${
-                            toggleLiked
-                                ? 'fill-red text-red-primary'
-                                : 'text-black-light'
-                        }`}
+                        className={`w-8 mr-4 select-none cursor-pointer ${toggleLiked
+                            ? 'fill-red text-red-primary'
+                            : 'text-black-light'
+                            }`}
                     >
                         <path
                             strokeLinecap='round'
